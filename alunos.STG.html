@@ -14,13 +14,13 @@
         <div class="logo"><h2>SGE Aluno</h2></div>
         <ul class="nav-links">
             <li class="section-title">MEU PAINEL</li>
-            <li onclick="window.location.reload()">Início / Status</li>
-            <li onclick="navegar('aba-documentos')">Meus Documentos</li>
-            <li onclick="navegar('aba-vagas')">Vagas de Estágio</li>
+            <li onclick="navegar('aba-status')" style="cursor:pointer">Início / Status</li>
+            <li onclick="navegar('aba-documentos')" style="cursor:pointer">Meus Documentos</li>
+            <li onclick="navegar('aba-vagas')" style="cursor:pointer">Vagas de Estágio</li>
             
             <li class="section-title">CONFIGURAÇÕES</li>
             <li>Meu Perfil</li>
-            <li>Sair</li>
+            <li onclick="window.location.href='index.html'" style="cursor:pointer">Sair</li>
         </ul>
     </nav>
 
@@ -33,8 +33,13 @@
         <section id="aba-status" class="view-section active">
             <div class="table-section" style="margin-bottom: 25px;">
                 <h2>Meu Estágio Atual</h2>
-                <div id="status-container" style="margin-top: 20px;">
-                    <p>Carregando informações do estágio...</p>
+                <div id="status-container" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="table-section" style="margin-bottom: 25px; border-top: 4px solid #f1c40f;">
+                <h2>Mural de Atividades (Professor)</h2>
+                <div id="atividades-professor-container" style="margin-top: 15px;">
+                    <p style="color: gray;">Nenhuma atividade pendente.</p>
                 </div>
             </div>
 
@@ -57,37 +62,18 @@
         <section id="aba-documentos" class="view-section">
             <div class="table-section">
                 <h2>Documentação do Estágio</h2>
-                <p style="margin-bottom: 15px; color: #666;">Aqui você pode baixar modelos e visualizar seus documentos enviados.</p>
+                <p id="doc-alerta" style="margin-bottom: 15px; color: #666;"></p>
                 
                 <table>
                     <thead>
                         <tr>
                             <th>Documento</th>
                             <th>Tipo</th>
-                            <th>Status</th>
+                            <th>Status no Sistema</th>
                             <th>Ação</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>Plano de Atividades</td>
-                            <td>Modelo (.doc)</td>
-                            <td><span class="badge status-manutencao">Disponível</span></td>
-                            <td><button class="btn-primary" style="padding: 5px 10px;">Baixar</button></td>
-                        </tr>
-                        <tr>
-                            <td>Termo de Compromisso (TCE)</td>
-                            <td>PDF Enviado</td>
-                            <td><span class="badge status-plano">Em Análise</span></td>
-                            <td><button class="btn-primary" style="padding: 5px 10px; background: #34495e;">Ver PDF</button></td>
-                        </tr>
-                        <tr>
-                            <td>Relatório Mensal - Jan</td>
-                            <td>Relatório</td>
-                            <td><span class="badge status-manutencao">Aprovado</span></td>
-                            <td><button class="btn-primary" style="padding: 5px 10px; background: #34495e;">Ver</button></td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tabela-documentos-aluno"></tbody>
                 </table>
 
                 <div style="margin-top: 30px; padding: 20px; border: 2px dashed #05c46b; border-radius: 10px; text-align: center;">
@@ -108,40 +94,103 @@
     </main>
 
     <script>
-        // --- LÓGICA DE NAVEGAÇÃO ---
+        const sb = document.getElementById('sidebar');
+        const ct = document.getElementById('main-content');
+
+        // --- LÓGICA DO MENU ---
+        sb.style.transition = "all 0.3s ease";
+        ct.style.transition = "all 0.3s ease";
+
+        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => {
+            sb.style.left = "0";
+            ct.style.marginLeft = "250px";
+        });
+
+        sb.addEventListener('mouseleave', () => {
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+        });
+
         function navegar(id) {
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+            const aba = document.getElementById(id);
+            if(aba) aba.classList.add('active');
         }
 
-        // --- LÓGICA PARA BUSCAR O ESTÁGIO DO ALUNO ---
-        function carregarEstagioAluno() {
-            // Buscamos do LocalStorage que a Admin e Professor usam
-            const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
-            const container = document.getElementById('status-container');
+        // --- FUNÇÃO PARA RECEBER ATIVIDADES DO PROFESSOR ---
+        function carregarAtividadesDoProfessor() {
+            const atividades = JSON.parse(localStorage.getItem('sge_atividades') || '[]');
+            const container = document.getElementById('atividades-professor-container');
             
-            // Para teste, vamos pegar o primeiro aluno da lista ou mostrar "Sem estágio"
-            if (dados.length > 0) {
-                const meuEstagio = dados[0]; // Simula que o usuário logado é o primeiro da lista
-                container.innerHTML = `
-                    <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #05c46b;">
-                        <h3 style="color: #2c3e50;">${meuEstagio.nome}</h3>
-                        <p><strong>Empresa:</strong> ${meuEstagio.empresa}</p>
-                        <p><strong>Status Atual:</strong> <span class="${meuEstagio.badgeCls}">${meuEstagio.status}</span></p>
-                        <p style="margin-top:10px; font-size: 14px; color: #666;">Responsável: ${meuEstagio.resp}</p>
-                    </div>
-                `;
+            if (atividades.length > 0) {
+                container.innerHTML = ''; // Limpa o aviso de "Nenhuma atividade"
+                
+                // Mostra as atividades da mais recente para a mais antiga
+                atividades.reverse().forEach(at => {
+                    const item = document.createElement('div');
+                    item.style.cssText = "background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #f1c40f;";
+                    item.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: #856404; font-size: 16px;">${at.titulo}</strong>
+                            <small style="color: #999;">${at.data}</small>
+                        </div>
+                        <p style="margin-top: 8px; color: #555; line-height: 1.4;">${at.desc}</p>
+                        <button onclick="alert('Funcionalidade de resposta em breve!')" style="margin-top: 10px; font-size: 11px; cursor: pointer; padding: 4px 8px;">Responder Atividade</button>
+                    `;
+                    container.appendChild(item);
+                });
             } else {
-                container.innerHTML = "<p>Você ainda não possui um estágio vinculado.</p>";
+                container.innerHTML = "<p style='color: gray;'>Nenhuma atividade pendente enviada pelo seu orientador.</p>";
             }
         }
 
-        // Sidebar
-        const sb = document.getElementById('sidebar'), ct = document.getElementById('main-content');
-        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => { sb.classList.remove('hidden'); ct.classList.remove('full-width'); });
-        sb.addEventListener('mouseleave', () => { sb.classList.add('hidden'); ct.classList.add('full-width'); });
+        // --- SINCRONIZAÇÃO COM DADOS DO ESTÁGIO ---
+        function carregarDadosSincronizados() {
+            const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
+            const container = document.getElementById('status-container');
+            const tabelaDocs = document.getElementById('tabela-documentos-aluno');
+            
+            if (dados.length > 0) {
+                const meuEstagio = dados[0]; 
 
-        window.onload = carregarEstagioAluno;
+                container.innerHTML = `
+                    <div style="background: #f4f4f4; padding: 20px; border-radius: 8px; border-left: 8px solid #007bff;">
+                        <h3 style="color: #2c3e50;">Bem-vindo(a), ${meuEstagio.nome}</h3>
+                        <p><strong>Empresa:</strong> ${meuEstagio.empresa}</p>
+                        <p><strong>Status Atual:</strong> <span class="badge ${meuEstagio.badgeCls || meuEstagio.badgeClass}">${meuEstagio.status}</span></p>
+                        <p style="margin-top:10px; font-size: 14px; color: #555;">
+                            Responsável no Sistema: <strong>${meuEstagio.resp || meuEstagio.responsavel}</strong>
+                        </p>
+                    </div>
+                `;
+
+                tabelaDocs.innerHTML = `
+                    <tr>
+                        <td>Plano de Trabalho</td>
+                        <td>PDF</td>
+                        <td><span class="badge ${meuEstagio.badgeCls || meuEstagio.badgeClass}">${meuEstagio.status}</span></td>
+                        <td><button class="btn-primary" onclick="alert('Baixando Modelo...')">Baixar</button></td>
+                    </tr>
+                `;
+            } else {
+                container.innerHTML = "<p>Nenhum estágio ativo encontrado no sistema.</p>";
+                tabelaDocs.innerHTML = "<tr><td colspan='4'>Nenhum documento encontrado.</td></tr>";
+            }
+        }
+
+        // Inicialização
+        window.onload = () => {
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+            carregarDadosSincronizados();
+            carregarAtividadesDoProfessor();
+        };
+
+        // Atualiza em tempo real se o professor enviar algo enquanto o aluno está com a aba aberta
+        window.addEventListener('storage', () => {
+            carregarDadosSincronizados();
+            carregarAtividadesDoProfessor();
+        });
     </script>
 </body>
 </html>
