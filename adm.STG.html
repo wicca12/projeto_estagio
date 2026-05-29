@@ -3,33 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IFSertãoPE - SGE </title>
-    <link rel="stylesheet" href="adm.css">
+    <title>IFSertãoPE - SGE (Administração)</title>
+    <link rel="stylesheet" href="adm.STG.css">
 </head>
 <body>
 
     <button id="btn-toggle-menu" class="btn-menu-trigger">☰</button>
 
     <nav class="sidebar" id="sidebar">
-        <div class="logo">
-            <h2>SGE Estágios</h2>
-        </div>
+        <div class="logo"><h2>SGE Estágios</h2></div>
         <ul class="nav-links">
             <li class="section-title">ADMINISTRAÇÃO</li>
             <li>Cadastrar Cursos/Empresas</li>
             <li>Validar Novos Estágios</li>
-            
             <li class="section-title">PEDAGÓGICO</li>
-            <li>Avaliar Planos (Orientador)</li>
-            <li>Parecer Final</li>
-
-            <li class="section-title">OPERACIONAL</li>
-            <li>Validar Folha (Supervisor)</li>
-            <li>Ficha de Desempenho</li>
-
-            <li class="section-title">ESTUDANTE</li>
-            <li>Meus Pedidos</li>
-            <li>Enviar Relatórios</li>
+            <li onclick="window.location.href='professor.orin.STG.html'" style="cursor:pointer">Avaliar Planos (Orientador)</li>
         </ul>
     </nav>
 
@@ -40,22 +28,10 @@
         </header>
         
         <section class="stats-container">
-            <div class="card border-blue">
-                <h3>Abertura</h3>
-                <p id="count-abertura">0 Pendentes</p>
-            </div>
-            <div class="card border-yellow">
-                <h3>Em Andamento</h3>
-                <p id="count-andamento">0 Aguardando</p>
-            </div>
-            <div class="card border-green">
-                <h3>Concluídos</h3>
-                <p id="count-concluido">0 Finalizados</p>
-            </div>
-            <div class="card border-red">
-                <h3>Total</h3>
-                <p id="count-total">0 Registros</p>
-            </div>
+            <div class="card border-blue"><h3>Abertura</h3><p id="count-abertura">0 Pendentes</p></div>
+            <div class="card border-yellow"><h3>Em Andamento</h3><p id="count-andamento">0 Aguardando</p></div>
+            <div class="card border-green"><h3>Concluídos</h3><p id="count-concluido">0 Finalizados</p></div>
+            <div class="card border-red"><h3>Total</h3><p id="count-total">0 Registros</p></div>
         </section>
 
         <section class="table-section">
@@ -66,15 +42,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Estagiário</th>
+                        <th>Estagiário / Tipo</th>
                         <th>Empresa</th>
                         <th>Status do Fluxo</th>
                         <th>Responsável Atual</th>
                         <th>Ação Próxima</th>
                     </tr>
                 </thead>
-                <tbody id="tabela-estagios">
-                </tbody>
+                <tbody id="tabela-estagios"></tbody>
             </table>
         </section>
     </main>
@@ -82,26 +57,44 @@
     <script>
         const estiloBotoes = "width: 100px; height: 35px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; margin-right: 5px;";
         const tabela = document.getElementById('tabela-estagios');
+        const sb = document.getElementById('sidebar');
+        const ct = document.getElementById('main-content');
 
+        // --- LÓGICA DO MENU (SIDEBAR) ---
+        // Abre o menu ao passar o mouse no botão
+        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => {
+            sb.style.left = "0";
+            ct.style.marginLeft = "250px";
+        });
+
+        // Fecha o menu ao tirar o mouse da barra lateral
+        sb.addEventListener('mouseleave', () => {
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+        });
+
+        // --- LÓGICA DE DADOS ---
         function salvarDados() {
             const linhas = [];
             tabela.querySelectorAll('tr').forEach(linha => {
                 linhas.push({
-                    nome: linha.cells[0].innerText,
+                    nome: linha.dataset.nome,
                     empresa: linha.cells[1].innerText,
                     status: linha.querySelector('.badge').innerText,
                     badgeClass: linha.querySelector('.badge').className,
-                    responsavel: linha.cells[3].innerText
+                    responsavel: linha.cells[3].innerText,
+                    tipo: linha.dataset.tipo
                 });
             });
-            localStorage.setItem('estagios_sge', JSON.stringify(linhas));
+            localStorage.setItem('sge_data', JSON.stringify(linhas));
+            atualizarCards();
         }
 
         function carregarDados() {
-            const dados = JSON.parse(localStorage.getItem('estagios_sge') || "[]");
+            const dados = JSON.parse(localStorage.getItem('sge_data') || "[]");
             tabela.innerHTML = "";
             dados.forEach(item => {
-                adicionarLinhaNaTabela(item.nome, item.empresa, item.status, item.badgeClass, item.responsavel);
+                adicionarLinhaNaTabela(item.nome, item.empresa, item.status, item.badgeClass, item.responsavel, item.tipo);
             });
             atualizarCards();
         }
@@ -109,51 +102,45 @@
         function atualizarCards() {
             const linhas = tabela.querySelectorAll('tr');
             let abertura = 0, andamento = 0, concluido = 0;
-
             linhas.forEach(linha => {
-                const status = linha.querySelector('.badge').innerText.toLowerCase();
-                if (status === "em andamento") andamento++;
-                else if (status === "concluído") concluido++;
-                else abertura++;
+                const badge = linha.querySelector('.badge');
+                if (badge) {
+                    const status = badge.innerText.toLowerCase();
+                    if (status === "em andamento") andamento++;
+                    else if (status === "concluído") concluido++;
+                    else abertura++;
+                }
             });
-
             document.getElementById('count-abertura').innerText = `${abertura} Pendentes`;
             document.getElementById('count-andamento').innerText = `${andamento} Aguardando`;
             document.getElementById('count-concluido').innerText = `${concluido} Finalizados`;
             document.getElementById('count-total').innerText = `${linhas.length} Registros`;
         }
 
-        function adicionarLinhaNaTabela(nome, empresa, statusTxt = "Abertura", badgeClass = "badge status-abertura", responsavel = "Novo Registro") {
-            const novaLinha = document.createElement('tr');
-            novaLinha.innerHTML = `
-                <td>${nome}</td>
+        function adicionarLinhaNaTabela(nome, empresa, statusTxt = "Abertura", badgeClass = "badge status-abertura", responsavel = "Admin", tipo = "Obrigatório") {
+            const tr = document.createElement('tr');
+            tr.dataset.nome = nome;
+            tr.dataset.tipo = tipo;
+            tr.innerHTML = `
+                <td><strong>${nome}</strong><br><small style="color:gray">${tipo}</small></td>
                 <td>${empresa}</td>
                 <td><span class="${badgeClass}">${statusTxt}</span></td>
                 <td>${responsavel}</td>
                 <td class="acoes"></td>
             `;
-            
-            const celulaAcao = novaLinha.querySelector('.acoes');
-            renderizarBotoes(novaLinha, statusTxt);
-            tabela.appendChild(novaLinha);
+            renderizarBotoes(tr, statusTxt);
+            tabela.appendChild(tr);
         }
 
         function renderizarBotoes(linha, status) {
             const celulaAcao = linha.querySelector('.acoes');
             const badge = linha.querySelector('.badge');
-            celulaAcao.innerHTML = ""; // Limpa para renderizar o estado atual
+            celulaAcao.innerHTML = "";
 
-            // Botão EXCLUIR (Sempre visível)
             const btnExcluir = document.createElement('button');
             btnExcluir.innerText = "Excluir";
             btnExcluir.style.cssText = estiloBotoes + "background: #e74c3c; color: white;";
-            btnExcluir.onclick = () => {
-                if(confirm(`Deseja excluir o registro de ${linha.cells[0].innerText}?`)) {
-                    linha.remove();
-                    salvarDados();
-                    atualizarCards();
-                }
-            };
+            btnExcluir.onclick = () => { if(confirm("Excluir?")) { linha.remove(); salvarDados(); } };
 
             if (status === "Abertura") {
                 const btnAprovar = document.createElement('button');
@@ -164,63 +151,39 @@
                     badge.className = "badge status-plano";
                     renderizarBotoes(linha, "Em andamento");
                     salvarDados();
-                    atualizarCards();
                 };
                 celulaAcao.appendChild(btnAprovar);
-            } 
-            else if (status === "Em andamento") {
-                const btnAguardando = document.createElement('button');
-                btnAguardando.innerText = "Aguardando";
-                btnAguardando.style.cssText = estiloBotoes + "background: #007bff; color: white; opacity: 0.5; cursor: default;";
-                
+            } else if (status === "Em andamento") {
                 const btnFeito = document.createElement('button');
-                btnFeito.innerText = "Feito";
+                btnFeito.innerText = "Concluir";
                 btnFeito.style.cssText = estiloBotoes + "background: #27ae60; color: white;";
                 btnFeito.onclick = () => {
                     badge.innerText = "Concluído";
                     badge.className = "badge status-manutencao";
                     renderizarBotoes(linha, "Concluído");
                     salvarDados();
-                    atualizarCards();
                 };
-                celulaAcao.appendChild(btnAguardando);
                 celulaAcao.appendChild(btnFeito);
-            } 
-            else if (status === "Concluído") {
-                const btnEditar = document.createElement('button');
-                btnEditar.innerText = "Editar";
-                btnEditar.style.cssText = estiloBotoes + "background: #f39c12; color: white;";
-                btnEditar.onclick = () => {
-                    badge.innerText = "Abertura";
-                    badge.className = "badge status-abertura";
-                    renderizarBotoes(linha, "Abertura");
-                    salvarDados();
-                    atualizarCards();
-                };
-                celulaAcao.appendChild(btnEditar);
             }
-
             celulaAcao.appendChild(btnExcluir);
         }
 
         document.getElementById('btn-adicionar').addEventListener('click', () => {
             const nome = prompt("Nome do Estagiário:");
             const empresa = prompt("Nome da Empresa:");
+            const tipo = prompt("Tipo de Estágio (Obrigatório / Não Obrigatório):", "Obrigatório");
             if (nome && empresa) {
-                adicionarLinhaNaTabela(nome, empresa);
+                adicionarLinhaNaTabela(nome, empresa, "Abertura", "badge status-abertura", "Admin", tipo);
                 salvarDados();
-                atualizarCards();
             }
         });
 
-        // Sidebar logic
-        const btnMenu = document.getElementById('btn-toggle-menu');
-        const sidebar = document.getElementById('sidebar');
-        const main = document.getElementById('main-content');
-        btnMenu.addEventListener('mouseenter', () => { sidebar.classList.remove('hidden'); main.classList.remove('full-width'); });
-        sidebar.addEventListener('mouseleave', () => { sidebar.classList.add('hidden'); main.classList.add('full-width'); });
-
-        window.onload = carregarDados;
+        // Inicializa com menu fechado e carrega dados
+        window.onload = () => {
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+            carregarDados();
+        };
     </script>
 </body>
 </html>
