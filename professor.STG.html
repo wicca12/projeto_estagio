@@ -15,6 +15,7 @@
         <ul class="nav-links">
             <li class="section-title">PEDAGÓGICO</li>
             <li onclick="navegar('view-professor')" style="cursor:pointer">Monitorar Estagiários</li>
+            <li onclick="navegar('view-atividades')" style="cursor:pointer">Lançar Atividades</li>
             
             <li class="section-title">SISTEMA</li>
             <li onclick="navegar('view-validar')" style="cursor:pointer">Gerenciar Fluxo</li>
@@ -52,10 +53,30 @@
             </div>
         </section>
 
+        <section id="view-atividades" class="view-section">
+            <div class="table-section">
+                <h2>Lançar Nova Atividade/Aviso</h2>
+                <p style="color: gray; margin-bottom: 15px;">A atividade enviada aparecerá instantaneamente no portal do aluno.</p>
+                
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                    <input type="text" id="at-titulo" placeholder="Título da Atividade (ex: Entrega de Relatório Mensal)" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    <textarea id="at-desc" placeholder="Instruções para o aluno..." style="width: 100%; padding: 10px; height: 80px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif;"></textarea>
+                    <button class="btn-primary" onclick="enviarAtividade()" style="background: #05c46b; width: 200px;">Enviar para Alunos</button>
+                </div>
+
+                <h3 style="margin-top: 30px;">Atividades Enviadas</h3>
+                <table style="margin-top: 10px;">
+                    <thead>
+                        <tr><th>Data</th><th>Título</th><th>Ação</th></tr>
+                    </thead>
+                    <tbody id="tabela-atividades-historico"></tbody>
+                </table>
+            </div>
+        </section>
+
         <section id="view-validar" class="view-section">
             <div class="table-section">
                 <h2>Gerenciar Status do Fluxo</h2>
-                <p style="color: gray; margin-bottom: 15px;">Avance ou remova estágios do sistema.</p>
                 <table>
                     <thead>
                         <tr><th>Nome</th><th>Empresa</th><th>Status</th><th>Resp.</th><th>Ação</th></tr>
@@ -64,7 +85,6 @@
                 </table>
             </div>
         </section>
-
     </main>
 
     <script>
@@ -72,19 +92,11 @@
         const sb = document.getElementById('sidebar');
         const ct = document.getElementById('main-content');
 
-        // Configuração de animação do Menu
+        // Sidebar Animation
         sb.style.transition = "all 0.3s ease";
         ct.style.transition = "all 0.3s ease";
-
-        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => {
-            sb.style.left = "0";
-            ct.style.marginLeft = "250px";
-        });
-
-        sb.addEventListener('mouseleave', () => {
-            sb.style.left = "-250px";
-            ct.style.marginLeft = "0";
-        });
+        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => { sb.style.left = "0"; ct.style.marginLeft = "250px"; });
+        sb.addEventListener('mouseleave', () => { sb.style.left = "-250px"; ct.style.marginLeft = "0"; });
 
         function navegar(id) {
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
@@ -92,14 +104,63 @@
             
             const titulos = {
                 'view-professor': 'Professor Orientador',
-                'view-validar': 'Gerenciar Fluxo'
+                'view-validar': 'Gerenciar Fluxo',
+                'view-atividades': 'Lançar Atividades'
             };
             document.getElementById('main-title').innerText = titulos[id] || "SGE";
             
             if(id === 'view-professor') carregarProfessor();
             if(id === 'view-validar') carregar();
+            if(id === 'view-atividades') carregarAtividadesProfessor();
         }
 
+        // --- LÓGICA DE ATIVIDADES ---
+        function enviarAtividade() {
+            const titulo = document.getElementById('at-titulo').value;
+            const desc = document.getElementById('at-desc').value;
+            if(!titulo || !desc) return alert("Preencha todos os campos!");
+
+            const novaAt = {
+                id: Date.now(),
+                data: new Date().toLocaleDateString('pt-BR'),
+                titulo: titulo,
+                desc: desc
+            };
+
+            const lista = JSON.parse(localStorage.getItem('sge_atividades') || '[]');
+            lista.push(novaAt);
+            localStorage.setItem('sge_atividades', JSON.stringify(lista));
+
+            alert("Atividade enviada com sucesso!");
+            document.getElementById('at-titulo').value = "";
+            document.getElementById('at-desc').value = "";
+            carregarAtividadesProfessor();
+        }
+
+        function carregarAtividadesProfessor() {
+            const lista = JSON.parse(localStorage.getItem('sge_atividades') || '[]');
+            const tbody = document.getElementById('tabela-atividades-historico');
+            tbody.innerHTML = '';
+            lista.reverse().forEach(at => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${at.data}</td>
+                    <td><strong>${at.titulo}</strong></td>
+                    <td><button onclick="removerAtividade(${at.id})" style="${estiloBtn} background: #e74c3c;">Excluir</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function removerAtividade(id) {
+            if(!confirm("Deseja apagar esta atividade?")) return;
+            let lista = JSON.parse(localStorage.getItem('sge_atividades') || '[]');
+            lista = lista.filter(at => at.id !== id);
+            localStorage.setItem('sge_atividades', JSON.stringify(lista));
+            carregarAtividadesProfessor();
+        }
+
+        // --- LÓGICA DE ESTÁGIOS ---
         function salvar() {
             const dados = [];
             document.querySelectorAll('#tabela-estagios tr').forEach(tr => {
@@ -121,7 +182,6 @@
             dados.forEach(d => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `<td>${d.nome}</td><td>${d.empresa}</td><td><span class="${d.badgeCls}">${d.status}</span></td><td>${d.resp}</td><td class="acoes"></td>`;
-                
                 const acoes = tr.querySelector('.acoes');
                 const btnNext = document.createElement('button');
                 btnNext.innerText = "Avançar";
@@ -131,14 +191,7 @@
                     else if(d.status === "Em andamento") { d.status = "Concluído"; d.badgeCls = "badge status-manutencao"; }
                     salvar(); carregar();
                 };
-
-                const btnEx = document.createElement('button');
-                btnEx.innerText = "Excluir";
-                btnEx.style.cssText = estiloBtn + "background: #e74c3c;";
-                btnEx.onclick = () => { if(confirm("Remover este aluno?")) { tr.remove(); salvar(); } };
-
                 acoes.appendChild(btnNext);
-                acoes.appendChild(btnEx);
                 tbody.appendChild(tr);
             });
         }
@@ -147,25 +200,14 @@
             const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
             const tbody = document.getElementById('tabela-prof-alunos');
             tbody.innerHTML = '';
-            
-            // Filtra apenas quem já saiu da fase inicial de Abertura
-            const orientados = dados.filter(x => x.status !== "Abertura");
-            
-            orientados.forEach(d => {
+            dados.filter(x => x.status !== "Abertura").forEach(d => {
                 const tr = document.createElement('tr');
-                let infoStatus = d.status === "Em andamento" ? "Aguardando Relatórios" : "Estágio Concluído";
-                
                 tr.innerHTML = `
                     <td><strong>${d.nome}</strong></td>
                     <td>${d.empresa}</td>
-                    <td><span class="badge ${d.badgeCls}">${infoStatus}</span></td>
-                    <td>
-                        <a href="#" onclick="alert('PDF do Plano')" style="color:#007bff; font-size:12px; display:block">📄 Plano.pdf</a>
-                        <a href="#" onclick="alert('PDF do Relatório')" style="color:#007bff; font-size:12px; display:block">📄 Relatorio.pdf</a>
-                    </td>
-                    <td>
-                        <button class="btn-primary" onclick="alert('Documentação validada com sucesso!')">Validar</button>
-                    </td>
+                    <td><span class="badge ${d.badgeCls}">${d.status === "Em andamento" ? "Aguardando Relatórios" : "Estágio Concluído"}</span></td>
+                    <td>📄 Plano.pdf</td>
+                    <td><button class="btn-primary" onclick="alert('Validado!')">Validar</button></td>
                 `;
                 tbody.appendChild(tr);
             });
