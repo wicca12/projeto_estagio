@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGE - Área do Aluno</title>
+    <link rel="stylesheet" href="alunos.STG.css">
+</head>
+<body>
+
+    <button id="btn-toggle-menu" class="btn-menu-trigger">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="logo"><h2>SGE Aluno</h2></div>
+        <ul class="nav-links">
+            <li class="section-title">MEU PAINEL</li>
+            <li onclick="window.location.reload()">Início / Status</li>
+            <li onclick="navegar('aba-documentos')">Meus Documentos</li>
+            <li onclick="navegar('aba-vagas')">Vagas de Estágio</li>
+            
+            <li class="section-title">CONFIGURAÇÕES</li>
+            <li>Meu Perfil</li>
+            <li>Sair</li>
+        </ul>
+    </nav>
+
+    <main class="content" id="main-content">
+        <header class="top-bar">
+            <img src="if.png" alt="logo">
+            <h1>Portal do Estudante</h1>
+        </header>
+
+        <section id="aba-status" class="view-section active">
+            <div class="table-section" style="margin-bottom: 25px;">
+                <h2>Meu Estágio Atual</h2>
+                <div id="status-container" style="margin-top: 20px;">
+                    <p>Carregando informações do estágio...</p>
+                </div>
+            </div>
+
+            <div class="stats-container">
+                <div class="card border-blue">
+                    <h3>Horas Totais</h3>
+                    <p>400 Horas</p>
+                </div>
+                <div class="card border-green">
+                    <h3>Horas Cumpridas</h3>
+                    <p>120 Horas</p>
+                </div>
+                <div class="card border-yellow">
+                    <h3>Próximo Relatório</h3>
+                    <p>Em 15 dias</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-documentos" class="view-section">
+            <div class="table-section">
+                <h2>Documentação do Estágio</h2>
+                <p style="margin-bottom: 15px; color: #666;">Aqui você pode baixar modelos e visualizar seus documentos enviados.</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Tipo</th>
+                            <th>Status</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Plano de Atividades</td>
+                            <td>Modelo (.doc)</td>
+                            <td><span class="badge status-manutencao">Disponível</span></td>
+                            <td><button class="btn-primary" style="padding: 5px 10px;">Baixar</button></td>
+                        </tr>
+                        <tr>
+                            <td>Termo de Compromisso (TCE)</td>
+                            <td>PDF Enviado</td>
+                            <td><span class="badge status-plano">Em Análise</span></td>
+                            <td><button class="btn-primary" style="padding: 5px 10px; background: #34495e;">Ver PDF</button></td>
+                        </tr>
+                        <tr>
+                            <td>Relatório Mensal - Jan</td>
+                            <td>Relatório</td>
+                            <td><span class="badge status-manutencao">Aprovado</span></td>
+                            <td><button class="btn-primary" style="padding: 5px 10px; background: #34495e;">Ver</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 30px; padding: 20px; border: 2px dashed #05c46b; border-radius: 10px; text-align: center;">
+                    <h3>Enviar Novo Documento</h3>
+                    <input type="file" id="fileInput" style="margin-top: 10px;">
+                    <br><br>
+                    <button class="btn-primary" onclick="alert('Documento enviado para análise do Orientador!')">Fazer Upload</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-vagas" class="view-section">
+            <div class="table-section">
+                <h2>Vagas Disponíveis</h2>
+                <p>Nenhuma vaga disponível para o seu curso no momento.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- LÓGICA DE NAVEGAÇÃO ---
+        function navegar(id) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // --- LÓGICA PARA BUSCAR O ESTÁGIO DO ALUNO ---
+        function carregarEstagioAluno() {
+            // Buscamos do LocalStorage que a Admin e Professor usam
+            const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
+            const container = document.getElementById('status-container');
+            
+            // Para teste, vamos pegar o primeiro aluno da lista ou mostrar "Sem estágio"
+            if (dados.length > 0) {
+                const meuEstagio = dados[0]; // Simula que o usuário logado é o primeiro da lista
+                container.innerHTML = `
+                    <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 5px solid #05c46b;">
+                        <h3 style="color: #2c3e50;">${meuEstagio.nome}</h3>
+                        <p><strong>Empresa:</strong> ${meuEstagio.empresa}</p>
+                        <p><strong>Status Atual:</strong> <span class="${meuEstagio.badgeCls}">${meuEstagio.status}</span></p>
+                        <p style="margin-top:10px; font-size: 14px; color: #666;">Responsável: ${meuEstagio.resp}</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = "<p>Você ainda não possui um estágio vinculado.</p>";
+            }
+        }
+
+        // Sidebar
+        const sb = document.getElementById('sidebar'), ct = document.getElementById('main-content');
+        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => { sb.classList.remove('hidden'); ct.classList.remove('full-width'); });
+        sb.addEventListener('mouseleave', () => { sb.classList.add('hidden'); ct.classList.add('full-width'); });
+
+        window.onload = carregarEstagioAluno;
+    </script>
+</body>
+</html>

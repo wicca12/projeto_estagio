@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFSertãoPE - SGE (Professor Orientador)</title>
+    <link rel="stylesheet" href="professor.orin.STG.css">
+</head>
+<body>
+
+    <button id="btn-toggle-menu" class="btn-menu-trigger">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="logo"><h2>SGE Estágios</h2></div>
+        <ul class="nav-links">
+            <li class="section-title">PEDAGÓGICO</li>
+            <li onclick="navegar('view-professor')" style="cursor:pointer">Monitorar Estagiários</li>
+            
+            <li class="section-title">SISTEMA</li>
+            <li onclick="navegar('view-validar')" style="cursor:pointer">Gerenciar Fluxo</li>
+        </ul>
+    </nav>
+
+    <main class="content" id="main-content">
+        <header class="top-bar">
+            <img src="if.png" alt="logo">
+            <h1 id="main-title">Professor Orientador</h1>
+        </header>
+
+        <section id="view-professor" class="view-section active">
+            <div class="table-section" style="margin-bottom: 20px; display: flex; align-items: center; gap: 20px; border-left: 8px solid #05c46b;">
+                <div style="width: 70px; height: 70px; background: #2c3e50; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">PO</div>
+                <div>
+                    <h2>Painel de Orientação</h2>
+                    <p>Visualize o progresso e valide os documentos dos seus alunos.</p>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <table style="margin-top: 15px;">
+                    <thead>
+                        <tr>
+                            <th>Estagiário</th>
+                            <th>Empresa</th>
+                            <th>Status Atual</th>
+                            <th>Documentos Enviados</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-prof-alunos"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-validar" class="view-section">
+            <div class="table-section">
+                <h2>Gerenciar Status do Fluxo</h2>
+                <p style="color: gray; margin-bottom: 15px;">Avance ou remova estágios do sistema.</p>
+                <table>
+                    <thead>
+                        <tr><th>Nome</th><th>Empresa</th><th>Status</th><th>Resp.</th><th>Ação</th></tr>
+                    </thead>
+                    <tbody id="tabela-estagios"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const estiloBtn = "padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; margin-right: 5px; font-size: 12px; color: white;";
+        const sb = document.getElementById('sidebar');
+        const ct = document.getElementById('main-content');
+
+        // Configuração de animação do Menu
+        sb.style.transition = "all 0.3s ease";
+        ct.style.transition = "all 0.3s ease";
+
+        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => {
+            sb.style.left = "0";
+            ct.style.marginLeft = "250px";
+        });
+
+        sb.addEventListener('mouseleave', () => {
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+        });
+
+        function navegar(id) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            const titulos = {
+                'view-professor': 'Professor Orientador',
+                'view-validar': 'Gerenciar Fluxo'
+            };
+            document.getElementById('main-title').innerText = titulos[id] || "SGE";
+            
+            if(id === 'view-professor') carregarProfessor();
+            if(id === 'view-validar') carregar();
+        }
+
+        function salvar() {
+            const dados = [];
+            document.querySelectorAll('#tabela-estagios tr').forEach(tr => {
+                dados.push({
+                    nome: tr.cells[0].innerText,
+                    empresa: tr.cells[1].innerText,
+                    status: tr.querySelector('.badge').innerText,
+                    badgeCls: tr.querySelector('.badge').className,
+                    resp: tr.cells[3].innerText
+                });
+            });
+            localStorage.setItem('sge_data', JSON.stringify(dados));
+        }
+
+        function carregar() {
+            const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
+            const tbody = document.getElementById('tabela-estagios');
+            tbody.innerHTML = '';
+            dados.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${d.nome}</td><td>${d.empresa}</td><td><span class="${d.badgeCls}">${d.status}</span></td><td>${d.resp}</td><td class="acoes"></td>`;
+                
+                const acoes = tr.querySelector('.acoes');
+                const btnNext = document.createElement('button');
+                btnNext.innerText = "Avançar";
+                btnNext.style.cssText = estiloBtn + "background: #007bff;";
+                btnNext.onclick = () => {
+                    if(d.status === "Abertura") { d.status = "Em andamento"; d.badgeCls = "badge status-plano"; }
+                    else if(d.status === "Em andamento") { d.status = "Concluído"; d.badgeCls = "badge status-manutencao"; }
+                    salvar(); carregar();
+                };
+
+                const btnEx = document.createElement('button');
+                btnEx.innerText = "Excluir";
+                btnEx.style.cssText = estiloBtn + "background: #e74c3c;";
+                btnEx.onclick = () => { if(confirm("Remover este aluno?")) { tr.remove(); salvar(); } };
+
+                acoes.appendChild(btnNext);
+                acoes.appendChild(btnEx);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function carregarProfessor() {
+            const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
+            const tbody = document.getElementById('tabela-prof-alunos');
+            tbody.innerHTML = '';
+            
+            // Filtra apenas quem já saiu da fase inicial de Abertura
+            const orientados = dados.filter(x => x.status !== "Abertura");
+            
+            orientados.forEach(d => {
+                const tr = document.createElement('tr');
+                let infoStatus = d.status === "Em andamento" ? "Aguardando Relatórios" : "Estágio Concluído";
+                
+                tr.innerHTML = `
+                    <td><strong>${d.nome}</strong></td>
+                    <td>${d.empresa}</td>
+                    <td><span class="badge ${d.badgeCls}">${infoStatus}</span></td>
+                    <td>
+                        <a href="#" onclick="alert('PDF do Plano')" style="color:#007bff; font-size:12px; display:block">📄 Plano.pdf</a>
+                        <a href="#" onclick="alert('PDF do Relatório')" style="color:#007bff; font-size:12px; display:block">📄 Relatorio.pdf</a>
+                    </td>
+                    <td>
+                        <button class="btn-primary" onclick="alert('Documentação validada com sucesso!')">Validar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.onload = () => { 
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+            carregar(); 
+            carregarProfessor(); 
+        };
+    </script>
+</body>
+</html>
