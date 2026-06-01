@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFSertãoPE - SGE | Recuperar Senha</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="brand-section">
+            <img src="if.png" alt="Logo IFSertãoPE">
+            <h1>Recuperar Senha</h1>
+            <p>Insira os dados abaixo para redefinir sua senha.</p>
+        </div>
+
+        <form id="recoveryForm" action="#" method="POST">
+           
+            <div class="form-group">
+                <label for="identifier">CPF ou E-mail Institucional</label>
+                <input type="text" id="identifier" name="identifier" placeholder="Digite seu CPF ou e-mail" required>
+            </div>
+
+            <button type="submit" class="btn-login">Enviar Instruções</button>
+        </form>
+
+        <div class="footer-links">
+            <p>Lembrou a senha? <a href="login.html">Voltar para o Login</a></p>
+        </div>
+    </div>
+
+   <script>
+document.getElementById('recoveryForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+
+    const identifier = document.getElementById('identifier').value;
+    const responseDiv = document.createElement('div');
+
+    responseDiv.style.marginTop = "15px";
+    responseDiv.style.fontSize = "0.9rem";
+    responseDiv.style.fontWeight = "600";
+
+    this.appendChild(responseDiv);
+
+    if (!identifier) {
+        responseDiv.style.color = "red";
+        responseDiv.innerText = "Informe CPF ou e-mail.";
+        return;
+    }
+
+    try {
+        const response = await fetch('recuperacao_senha.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                identifier: identifier
+            })
+        });
+
+        const dados = await response.json();
+
+        if (response.ok) {
+
+            responseDiv.style.color = "green";
+            responseDiv.innerText = dados.mensagem;
+
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 2500);
+
+        } else {
+
+            responseDiv.style.color = "red";
+            responseDiv.innerText = dados.mensagem;
+        }
+
+    } catch (error) {
+        responseDiv.style.color = "red";
+        responseDiv.innerText = "Erro de conexão com o servidor.";
+    }
+});
+</script>
+</body>
+</html>

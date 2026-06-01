@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFSertãoPE - SGE </title>
+    <link rel="stylesheet" href="tela_inicial.css">
+</head>
+<body>
+
+    <button id="btn-toggle-menu" class="btn-menu-trigger">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="logo">
+            <h2>SGE Estágios</h2>
+        </div>
+        <ul class="nav-links">
+            <li class="section-title">ADMINISTRAÇÃO</li>
+            <li>Cadastrar Cursos/Empresas</li>
+            <li>Validar Novos Estágios</li>
+            
+            <li class="section-title">PEDAGÓGICO</li>
+            <li>Avaliar Planos (Orientador)</li>
+            <li>Parecer Final</li>
+
+            <li class="section-title">OPERACIONAL</li>
+            <li>Validar Folha (Supervisor)</li>
+            <li>Ficha de Desempenho</li>
+
+            <li class="section-title">ESTUDANTE</li>
+            <li>Meus Pedidos</li>
+            <li>Enviar Relatórios</li>
+        </ul>
+    </nav>
+
+    <main class="content" id="main-content">
+        <header class="top-bar">
+            <img src="if.png" alt="logo">
+            <h1>IFSertãoPE - SGE</h1>
+        </header>
+        
+        <section class="stats-container">
+            <div class="card border-blue">
+                <h3>Abertura</h3>
+                <p id="count-abertura">0 Pendentes</p>
+            </div>
+            <div class="card border-yellow">
+                <h3>Em Andamento</h3>
+                <p id="count-andamento">0 Aguardando</p>
+            </div>
+            <div class="card border-green">
+                <h3>Concluídos</h3>
+                <p id="count-concluido">0 Finalizados</p>
+            </div>
+            <div class="card border-red">
+                <h3>Total</h3>
+                <p id="count-total">0 Registros</p>
+            </div>
+        </section>
+
+        <section class="table-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2>Fluxo de Estágios em Andamento</h2>
+                <button id="btn-adicionar" style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">+ Adicionar Card</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Estagiário</th>
+                        <th>Empresa</th>
+                        <th>Status do Fluxo</th>
+                        <th>Responsável Atual</th>
+                        <th>Ação Próxima</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-estagios">
+                    <tr>
+                        <td>João Silva</td>
+                        <td>Tech Solutions</td>
+                        <td><span class="badge status-abertura">Aberto</span></td>
+                        <td>Admin(Setor Estágio)</td>
+                        <td><button class="btn-primary">Aprovar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Maria Oliveira</td>
+                        <td>Educa Mais</td>
+                        <td><span class="badge status-plano">Plano de Trabalho</span></td>
+                        <td>Orientador(Professores)</td>
+                        <td><button class="btn-secondary">Aprovar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Lucas Souza</td>
+                        <td>Inova Corp</td>
+                        <td><span class="badge status-manutencao">Manutenção</span></td>
+                        <td>Supervisor</td>
+                        <td><button class="btn-secondary">Aprovar</button></td>
+                    </tr>
+                    <tr>
+                        <td>Ana Costa</td>
+                        <td>Bio Lab</td>
+                        <td><span class="badge status-finalizacao">Finalização</span></td>
+                        <td>aluno</td>
+                        <td><button class="btn-success">Aprovar</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        const estiloBotoes = "width: 100px; height: 35px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; margin-right: 5px;";
+
+        const btn = document.getElementById('btn-toggle-menu');
+        const sidebar = document.getElementById('sidebar');
+        const main = document.getElementById('main-content');
+        const tabela = document.getElementById('tabela-estagios');
+        const btnAdicionar = document.getElementById('btn-adicionar');
+
+        // FUNÇÃO PARA ATUALIZAR OS NÚMEROS DOS CARDS SUPERIORES
+        function atualizarCards() {
+            const linhas = tabela.querySelectorAll('tr');
+            let aberto = 0;
+            let andamento = 0;
+            let concluido = 0;
+
+            linhas.forEach(linha => {
+                const status = linha.querySelector('.badge').innerText.toLowerCase();
+                if (status === "em andamento") {
+                    andamento++;
+                } else if (status === "concluído") {
+                    concluido++;
+                } else {
+                    // Considera qualquer status inicial (Abertura, Plano, Manutenção, etc) como pendente
+                    aberto++;
+                }
+            });
+
+            document.getElementById('count-abertura').innerText = `${abertura} Pendentes`;
+            document.getElementById('count-andamento').innerText = `${andamento} Aguardando`;
+            document.getElementById('count-concluido').innerText = `${concluido} Finalizados`;
+            document.getElementById('count-total').innerText = `${linhas.length} Registros`;
+        }
+
+        btn.addEventListener('mouseenter', () => { sidebar.classList.remove('hidden'); main.classList.remove('full-width'); });
+        sidebar.addEventListener('mouseleave', () => { sidebar.classList.add('hidden'); main.classList.add('full-width'); });
+
+        function configurarBotoes(button) {
+            button.style.cssText += estiloBotoes;
+            const row = button.closest('tr');
+            const badge = row.querySelector('.badge');
+            const celulaAcao = button.parentElement;
+            
+            const textoOriginalBadge = badge.innerText;
+            const classeOriginalBadge = badge.className;
+
+            if (!row.querySelector('.btn-excluir')) {
+                const btnExcluir = document.createElement('button');
+                btnExcluir.innerText = "Excluir";
+                btnExcluir.className = "btn-excluir";
+                btnExcluir.style.cssText = estiloBotoes + "background: #e74c3c; color: white;";
+                
+                btnExcluir.onclick = () => {
+                    if(confirm(`Deseja realmente excluir o card de ${row.cells[0].innerText}?`)) {
+                        row.remove();
+                        atualizarCards(); // Atualiza após excluir
+                    }
+                };
+                celulaAcao.appendChild(btnExcluir);
+            }
+
+            button.addEventListener('click', function handleAprovar() {
+                const btnExcluir = row.querySelector('.btn-excluir');
+
+                if (this.innerText === "Aprovar") {
+                    badge.innerText = "Em andamento";
+                    badge.className = "badge status-plano"; 
+                    this.innerText = "Aguardando";
+                    this.style.opacity = "0.5";
+                    if (btnExcluir) btnExcluir.style.display = "none";
+
+                    if (!row.querySelector('.btn-feito-gerado')) {
+                        const btnFeito = document.createElement('button');
+                        btnFeito.innerText = "Feito";
+                        btnFeito.className = "btn-feito-gerado";
+                        btnFeito.style.cssText = estiloBotoes + "background: #27ae60; color: white;";
+
+                        btnFeito.addEventListener('click', () => {
+                            badge.innerText = "Concluído";
+                            badge.className = "badge status-manutencao";
+                            btnFeito.remove();
+                            this.style.display = "none";
+
+                            const btnEditar = document.createElement('button');
+                            btnEditar.innerText = "Editar";
+                            btnEditar.style.cssText = estiloBotoes + "background: #f39c12; color: white;";
+                            
+                            btnEditar.addEventListener('click', () => {
+                                badge.innerText = textoOriginalBadge;
+                                badge.className = classeOriginalBadge;
+                                this.style.display = "inline-block";
+                                this.innerText = "Aprovar";
+                                this.style.opacity = "1";
+                                if (btnExcluir) btnExcluir.style.display = "inline-block";
+                                btnEditar.remove();
+                                atualizarCards(); // Atualiza ao editar
+                            });
+                            celulaAcao.appendChild(btnEditar);
+                            atualizarCards(); // Atualiza ao clicar em Feito
+                        });
+                        celulaAcao.appendChild(btnFeito);
+                    }
+                    atualizarCards(); // Atualiza ao clicar em Aprovar
+                }
+            });
+        }
+
+        // Inicializa as linhas que já existem no HTML
+        document.querySelectorAll('table tbody tr td:last-child button').forEach(configurarBotoes);
+        atualizarCards(); // Contagem inicial
+
+        btnAdicionar.addEventListener('click', () => {
+            const nome = prompt("Nome do Estagiário:");
+            const empresa = prompt("Nome da Empresa:");
+            if (nome && empresa) {
+                const novaLinha = document.createElement('tr');
+                novaLinha.innerHTML = `
+                    <td>${nome}</td>
+                    <td>${empresa}</td>
+                    <td><span class="badge status-abertura">Abertura</span></td>
+                    <td>Novo Registro</td>
+                    <td><button class="btn-primary">Aprovar</button></td>
+                `;
+                tabela.appendChild(novaLinha);
+                configurarBotoes(novaLinha.querySelector('button'));
+                atualizarCards(); // Atualiza ao adicionar novo
+            }
+        });
+    </script>
+</body>
+</html>
