@@ -1,28 +1,47 @@
 <?php
-session_start();
-if (!isset($_SESSION['usuario_perfil']) || !in_array($_SESSION['usuario_perfil'], ['admin', 'orientador'])) {
-    die("Acesso negado.");
-}
-require_once '../config/conexao.php';
-$pdo = Database::getConexao();
 
-if (isset($_GET['id']) && isset($_GET['status_atual'])) {
-    $id = (int)$_GET['id'];
-    $statusAtual = $_GET['status_atual'];
-    
-    // Define a próxima etapa do Fluxo
-    $novoStatus = 'Abertura';
-    if ($statusAtual === 'Abertura') {
-        $novoStatus = 'Em andamento';
-    } elseif ($statusAtual === 'Em andamento') {
-        $novoStatus = 'Concluído';
-    } else {
-        $novoStatus = 'Concluído';
-    }
+header("Content-Type: application/json");
+include("conexao.php");
 
-    $stmt = $pdo->prepare("UPDATE estagios SET status = :status WHERE id_estagio = :id");
-    $stmt->execute([':status' => $novoStatus, ':id' => $id]);
+$dados = json_decode(file_get_contents("php://input"), true);
+
+$id = $dados['id_usuario'] ?? null;
+$nome = $dados['nome'] ?? null;
+$email = $dados['email'] ?? null;
+$perfil = $dados['perfil'] ?? null;
+$senha = $dados['senha'] ?? null;
+
+if (!$id || !$nome || !$email || !$perfil) {
+    http_response_code(400);
+    echo json_encode(["mensagem" => "Dados incompletos."]);
+    exit;
 }
 
-header("Location: ../listar/listar.php?msg=atualizado");
-exit;
+if ($senha) {
+
+    $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+
+    $sql = "UPDATE usuarios 
+            SET nome = ?, email = ?, perfil = ?, senha_hash = ?
+            WHERE id_usuario = ?";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ssssi", $nome, $email, $perfil, $senhaHash, $id);
+
+} else {
+
+    $sql = "UPDATE usuarios 
+            SET nome = ?, email = ?, perfil = ?
+            WHERE id_usuario = ?";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sssi", $nome, $email, $perfil, $id);
+}
+
+if ($stmt->execute()) {
+    echo json_encode(["mensagem" => "Usuário atualizado com sucesso."]);
+} else {
+    http_response_code(500);
+    echo json_encode(["mensagem" => "Erro ao atualizar usuário."]);
+}
+?>
