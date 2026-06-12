@@ -1,0 +1,133 @@
+/* ======================================================================= */
+/* SEÇÃO DE INFORMAÇÕES DO PERFIL DO SUPERVISOR                            */
+/* ======================================================================= */
+.profile-badge-container {
+    background: #ffffff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: table; /* Alternativa robusta e estável para layout de blocos */
+    width: calc(100% - 40px);
+    border-left: 5px solid #27ae60; /* Verde Institucional IFSertãoPE */
+}
+
+.profile-icon {
+    display: table-cell;
+    vertical-align: middle;
+    font-size: 32px;
+    padding-right: 15px;
+    width: 40px;
+}
+
+.profile-info {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.profile-info h3 {
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+}
+
+.profile-info p {
+    margin: 3px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.profile-info span.profile-role {
+    text-transform: uppercase;
+    color: #27ae60;
+    font-weight: bold;
+}
+
+/* ======================================================================= */
+/* ESTRUTURA DOS MODAIS E FLUXOS DE INPUT                                  */
+/* ======================================================================= */
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    height: 100%; 
+    background-color: rgba(0,0,0,0.5);
+    align-items: center; 
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #fff; 
+    padding: 25px; 
+    border-radius: 8px; 
+    width: 100%; 
+    max-width: 500px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    margin-bottom: 15px; 
+    border-bottom: 1px solid #eee; 
+    padding-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block; 
+    margin-bottom: 5px; 
+    font-weight: bold; 
+    color: #333;
+}
+
+.form-control {
+    width: 100%; 
+    padding: 10px; 
+    border: 1px solid #ccc; 
+    border-radius: 4px; 
+    box-sizing: border-box; 
+    font-size: 14px;
+}
+
+.form-control:focus {
+    border-color: #27ae60; 
+    outline: none;
+}
+
+.modal-footer {
+    text-align: right; 
+    margin-top: 20px; 
+    border-top: 1px solid #eee; 
+    padding-top: 10px;
+}
+
+.btn-cancelar {
+    background: #95a5a6; 
+    color: white; 
+    border: none; 
+    padding: 8px 15px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    margin-right: 10px;
+}
+
+.btn-salvar {
+    background: #27ae60; 
+    color: white; 
+    border: none; 
+    padding: 8px 15px; 
+    border-radius: 4px; 
+    cursor: pointer;
+}
+
+.txt-center {
+    text-align: center;
+}
+
+.padding-loading {
+    padding: 20px;
+}
