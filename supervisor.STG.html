@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGE - Painel do Supervisor (Empresa)</title>
+    <link rel="stylesheet" href="admn.STG.css">
+    <link rel="stylesheet" href="supervisor.STG.css">
+</head>
+<body>
+
+    <button id="btn-toggle-menu" class="btn-menu-trigger">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="logo"><h2>SGE Supervisor</h2></div>
+        <ul class="nav-links">
+            <li class="section-title">EMPRESA / CAMPO</li>
+            <li class="active">Avaliar Estagiários</li>
+            <li class="section-title">SISTEMA</li>
+            <li id="btn-sair">Sair</li>
+        </ul>
+    </nav>
+
+    <main class="content" id="main-content">
+        <header class="top-bar">
+            <img src="if.png" alt="Logo IFSertãoPE">
+            <h1 id="nome-supervisor-titulo">Painel de Supervisão</h1>
+        </header>
+
+        <section class="profile-badge-container">
+            <div class="profile-icon">👤</div>
+            <div class="profile-info">
+                <h3 id="perfil-nome">Nome:</h3>
+                <p><strong>ID do Utilizador:</strong> <span id="perfil-id">--</span></p>
+                <p><strong>Perfil de Acesso:</strong> <span id="perfil-tipo" class="profile-role">--</span></p>
+            </div>
+        </section>
+
+        <section class="table-container">
+            <h2>Alunos sob sua Supervisão</h2>
+            <p>Selecione um aluno para validar folhas de ponto ou submeter a ficha de avaliação técnica.</p>
+            
+            <table class="table-sge">
+                <thead>
+                    <tr>
+                        <th>Estagiário</th>
+                        <th>Período do Estágio</th>
+                        <th>Status Atual</th>
+                        <th>Ações Obrigatórias</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-estagiarios">
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <div id="modalAvaliacao" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-titulo-aluno">Avaliação de Desempenho</h3>
+            </div>
+            <form id="formAvaliacaoSupervisor">
+                <input type="hidden" id="input-id-estagio">
+                <input type="hidden" id="input-id-supervisor">
+
+                <div class="form-group">
+                    <label for="select-frequencia">Folha de Frequência / Pontos:</label>
+                    <select id="select-frequencia" class="form-control" required>
+                        <option value="">-- Selecione uma Ação --</option>
+                        <option value="validado">Validar Folha de Horas (Conforme)</option>
+                        <option value="rejeitado">Rejeitar (Apresenta Inconsistências)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-nota">Nota de Desempenho Prático (0 a 10):</label>
+                    <input type="number" id="input-nota" class="form-control" min="0" max="10" step="0.1" placeholder="Ex: 8.5" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="textarea-parecer">Parecer Descritivo do Supervisor:</label>
+                    <textarea id="textarea-parecer" class="form-control" rows="4" placeholder="Descreva os pontos fortes, assiduidade e conduta ética do estagiário..." required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+                    <button type="submit" class="btn-salvar">Submeter Avaliação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        window.onload = async () => {
+            // Inicialização estrutural do menu lateral
+            document.getElementById('sidebar').style.left = "-250px";
+            document.getElementById('main-content').style.marginLeft = "0";
+
+            // Captura as informações guardadas pelo login.html no localStorage
+            const idSupervisor = localStorage.getItem('usuario_id');
+            const nomeSupervisor = localStorage.getItem('usuario_nome');
+            const perfilSupervisor = localStorage.getItem('usuario_perfil');
+
+            // Proteção básica de segurança de acesso no Front-end
+            if (!idSupervisor || perfilSupervisor !== 'supervisor') {
+                alert("Acesso negado. Por favor, realize o login.");
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Injeta os dados informativos do perfil do usuário logado na interface
+            document.getElementById('nome-supervisor-titulo').innerText = `Supervisor: ${nomeSupervisor}`;
+            document.getElementById('perfil-nome').innerText = nomeSupervisor;
+            document.getElementById('perfil-id').innerText = idSupervisor;
+            document.getElementById('perfil-tipo').innerText = perfilSupervisor;
+
+            // Define o id do supervisor no campo oculto para submissões seguras de formulários
+            document.getElementById('input-id-supervisor').value = idSupervisor;
+
+            // Carrega a listagem de estagiários puxando dados do banco de dados
+            carregarEstagiarios(idSupervisor);
+        };
+
+        // Solicita os dados à API PHP passando o ID no corpo da requisição JSON
+        async function carregarEstagiarios(idSupervisor) {
+            const tbody = document.getElementById('tabela-estagiarios');
+            try {
+                const response = await fetch('buscar_estagiarios_supervisor.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ supervisor_id: idSupervisor })
+                });
+
+                const estagiarios = await response.json();
+                tbody.innerHTML = '';
+
+                if (!response.ok || estagiarios.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="txt-center padding-loading" style="color:#888;">Nenhum estagiário alocado à sua empresa no momento.</td></tr>`;
+                    return;
+                }
+
+                estagiarios.forEach(estagio => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${estagio.nome_aluno}</strong></td>
+                        <td>${formatarData(estagio.data_inicio)} - ${formatarData(estagio.data_fim)}</td>
+                        <td><span class="badge">${estagio.status}</span></td>
+                        <td>
+                            <button class="btn-primary" style="background:#2980b9;" onclick="abrirModalAvaliacao(${estagio.id_estagio}, '${estagio.nome_aluno}')">
+                                Lançar Desempenho ⭐
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="4" class="txt-center padding-loading" style="color:#e74c3c;">Erro ao ligar ao servidor de dados.</td></tr>`;
+            }
+        }
+
+        function abrirModalAvaliacao(idEstagio, nomeAluno) {
+            const idSupervisorSalvo = document.getElementById('input-id-supervisor').value;
+            document.getElementById('formAvaliacaoSupervisor').reset();
+            
+            document.getElementById('input-id-supervisor').value = idSupervisorSalvo;
+            document.getElementById('input-id-estagio').value = idEstagio;
+            document.getElementById('modal-titulo-aluno').innerText = `Avaliar: ${nomeAluno}`;
+            
+            // Ativa a exibição em Flex via JS apenas para sobrepor centralizado na tela
+            document.getElementById('modalAvaliacao').style.display = 'flex';
+        }
+
+        function fecharModal() {
+            document.getElementById('modalAvaliacao').style.display = 'none';
+        }
+
+        // Submissão assíncrona do payload completo contendo Inputs + Perfil
+        document.getElementById('formAvaliacaoSupervisor').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const idEstagio    = document.getElementById('input-id-estagio').value;
+            const idSupervisor = document.getElementById('input-id-supervisor').value;
+            const frequencia   = document.getElementById('select-frequencia').value;
+            const nota         = document.getElementById('input-nota').value;
+            const parecer      = document.getElementById('textarea-parecer').value;
+
+            try {
+                const response = await fetch('processar_nota_supervisor.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        id_estagio: parseInt(idEstagio),
+                        id_supervisor: parseInt(idSupervisor),
+                        status_frequencia: frequencia,
+                        nota_final: parseFloat(nota),
+                        parecer_critico: parecer
+                    })
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    alert(`Sucesso: ${resultado.mensagem}`);
+                    fecharModal();
+                    carregarEstagiarios(idSupervisor); // Atualização da tabela em tempo de execução
+                } else {
+                    alert(`Erro: ${resultado.mensagem}`);
+                }
+
+            } catch (error) {
+                alert("Falha operacional ao transmitir a avaliação para o servidor.");
+            }
+        });
+
+        function formatarData(dataString) {
+            if(!dataString) return '--/--/----';
+            const partes = dataString.split('-');
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+
+        // Controle do Menu Lateral (Sidebar Animation Drawer)
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+        
+        document.getElementById('btn-toggle-menu').onclick = () => {
+            if (sidebar.style.left === "-250px" || sidebar.style.left === "") {
+                sidebar.style.left = "0px";
+                mainContent.style.marginLeft = "250px";
+            } else {
+                sidebar.style.left = "-250px";
+                mainContent.style.marginLeft = "0";
+            }
+        };
+
+        // Ação de Logout limpando tokens locais
+        document.getElementById('btn-sair').onclick = () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        };
+    </script>
+</body>
+</html>
