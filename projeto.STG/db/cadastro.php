@@ -1,67 +1,170 @@
 <?php
-session_start();
-if (!isset($_SESSION['usuario_perfil']) || $_SESSION['usuario_perfil'] !== 'admin') {
-    die("Acesso negado.");
+
+header("Content-Type: application/json");
+
+include("conexao.php");
+
+// Recebe JSON
+$dados = json_decode(file_get_contents("php://input"), true);
+
+if (!$dados) {
+    http_response_code(400);
+
+    echo json_encode([
+        "mensagem" => "Dados inválidos."
+    ]);
+
+    exit;
 }
-require_once '../config/conexao.php';
-$pdo = Database::getConexao();
 
-// Carrega os estagiários cadastrados no sistema para preencher o Select do HTML
-$estagiarios = $pdo->query("SELECT id_usuario, nome FROM usuarios WHERE perfil = 'estagiario'")->fetchAll();
+$nome = trim($dados['fullName'] ?? '');
+$cpf = trim($dados['regId'] ?? '');
+$email = trim($dados['email'] ?? '');
+$perfil = trim($dados['profileType'] ?? '');
+$senhaDigitada = $dados['password'] ?? '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id_aluno = $_POST['id_aluno'];
-    $empresa = trim($_POST['empresa']);
-    $tipo = $_POST['tipo'];
+// Validação básica
+if (
+    empty($nome) ||
+    empty($cpf) ||
+    empty($email) ||
+    empty($perfil) ||
+    empty($senhaDigitada)
+) {
+    http_response_code(400);
 
-    if (!empty($id_aluno) && !empty($empresa)) {
-        $sql = "INSERT INTO estagios (id_aluno, empresa, tipo, status, responsavel) VALUES (:id_aluno, :empresa, :tipo, 'Abertura', 'Admin')";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':id_aluno' => $id_aluno,
-            ':empresa' => $empresa,
-            ':tipo' => $tipo
-        ]);
-        header("Location: ../listar/listar.php?msg=cadastrado");
-        exit;
-    }
+    echo json_encode([
+        "mensagem" => "Preencha todos os campos."
+    ]);
+
+    exit;
 }
+
+// Remove máscara do CPF
+$cpf = preg_replace('/\D/', '', $cpf);
+
+if (strlen($cpf) !== 11) {
+    http_response_code(400);
+
+    echo json_encode([
+        "mensagem" => "CPF inválido."
+    ]);
+
+    exit;
+}
+
+// Valida email
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    http_response_code(400);
+
+    echo json_encode([
+        "mensagem" => "E-mail inválido."
+    ]);
+
+    exit;
+}
+
+// Conversão dos perfis do formulário
+if ($perfil === "aluno") {
+    $perfil = "estagiario";
+}
+
+if ($perfil === "concedente") {
+    $perfil = "supervisor";
+}
+
+// Perfis permitidos no banco
+$perfisPermitidos = [
+    "estagiario",
+    "orientador",
+    "supervisor"
+];
+
+if (!in_array($perfil, $perfisPermitidos)) {
+    http_response_code(400);
+
+    echo json_encode([
+        "mensagem" => "Perfil inválido."
+    ]);
+
+    exit;
+}
+
+// Gera hash da senha
+$senhaHash = password_hash($senhaDigitada, PASSWORD_DEFAULT);
+
+// Verifica usuário existente
+$sqlVerifica = "
+SELECT id_usuario
+FROM usuarios
+WHERE email = ?
+OR cpf = ?
+";
+
+$stmt = $conn->prepare($sqlVerifica);
+$stmt->bind_param("ss", $email, $cpf);
+$stmt->execute();
+
+$resultado = $stmt->get_result();
+
+if ($resultado->num_rows > 0) {
+
+    $stmt->close();
+
+    http_response_code(409);
+
+    echo json_encode([
+        "mensagem" => "Usuário já cadastrado."
+    ]);
+
+    exit;
+}
+
+$stmt->close();
+
+// Insere usuário
+$sql = "
+INSERT INTO usuarios
+(
+    nome,
+    email,
+    senha_hash,
+    cpf,
+    perfil
+)
+VALUES
+(
+    ?, ?, ?, ?, ?
+)
+";
+
+$stmt = $conn->prepare($sql);
+
+$stmt->bind_param(
+    "sssss",
+    $nome,
+    $email,
+    $senhaHash,
+    $cpf,
+    $perfil
+);
+
+if ($stmt->execute()) {
+
+    echo json_encode([
+        "mensagem" => "Cadastro realizado com sucesso!"
+    ]);
+
+} else {
+
+    http_response_code(500);
+
+    echo json_encode([
+        "mensagem" => "Erro ao cadastrar usuário."
+    ]);
+}
+
+$stmt->close();
+$conn->close();
+
 ?>
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>SGE | Cadastrar Estágio</title>
-    <link rel="stylesheet" href="../adm.STG.css">
-</head>
-<body style="padding: 40px; background: #f4f6f9;">
-    <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h2>Cadastrar Novo Estágio</h2>
-        <form action="cadastrar.php" method="POST" style="margin-top: 20px;">
-            <div style="margin-bottom: 15px;">
-                <label style="display:block; margin-bottom:5px;">Selecione o Aluno:</label>
-                <select name="id_aluno" required style="width: 100%; padding: 10px;">
-                    <option value="">-- Escolha um Estudante --</option>
-                    <?php foreach($estagiarios as $est): ?>
-                        <option value="<?=$est['id_usuario']?>"><?=htmlspecialchars($est['nome'])?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <label style="display:block; margin-bottom:5px;">Empresa Concedente:</label>
-                <input type="text" name="empresa" required style="width: 95%; padding: 10px;">
-            </div>
-            <div style="margin-bottom: 20px;">
-                <label style="display:block; margin-bottom:5px;">Tipo de Estágio:</label>
-                <select name="tipo" style="width: 100%; padding: 10px;">
-                    <option value="Obrigatório">Obrigatório</option>
-                    <option value="Não Obrigatório">Não Obrigatório</option>
-                </select>
-            </div>
-            <button type="submit" style="background:#27ae60; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; width:100%;">Salvar no Banco</button>
-        </form>
-        <br>
-        <a href="../listar/listar.php" style="color: gray; text-decoration: none; display: block; text-align: center;">Voltar para a lista</a>
-    </div>
-</body>
-</html>
