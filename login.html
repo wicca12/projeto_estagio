@@ -16,10 +16,10 @@
         </div>
 
         <form id="loginForm" action="login.php" method="POST">
-           
+            
             <div class="form-group">
                 <label for="username">Usuário (CPF)</label>
-                <input type="text" id="username" name="username" placeholder="Digite o seu usuário" required autocomplete="username">
+                <input type="text" id="username" name="username" placeholder="Digite o seu usuário" required autocomplete="username" maxlength="14">
             </div>
 
             <div class="form-group">
@@ -36,7 +36,7 @@
 
             <div id="error-message" style="color: #e74c3c; margin-bottom: 15px; font-size: 0.85rem; text-align: left; display: none; font-weight: 600;"></div>
 
-            <button type="submit" class="btn-login">Entrar</button>
+            <button type="submit" id="btnSubmit" class="btn-login">Entrar</button>
         </form>
 
         <div class="footer-links">
@@ -44,13 +44,11 @@
         </div>
     </div>
 
-   <script>
-
-    // Máscara CPF
+<script>
+    // Máscara CPF (Melhorada para evitar bugs de cursor)
     const cpfInput = document.getElementById('username');
 
     cpfInput.addEventListener('input', function () {
-
         let valor = this.value.replace(/\D/g, '');
 
         valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
@@ -61,92 +59,93 @@
     });
 
     document.getElementById('loginForm').addEventListener('submit', async function(event) {
-
         event.preventDefault();
 
-        const usuario = document.getElementById('username').value.trim();
-        const senha = document.getElementById('password').value;
-
         const errorDiv = document.getElementById('error-message');
+        const btnSubmit = document.getElementById('btnSubmit');
+        
+        // Captura o valor bruto do CPF (apenas números) para mandar ao PHP
+        const usuarioFormatado = document.getElementById('username').value.trim();
+        const usuarioLimpo = usuarioFormatado.replace(/\D/g, ''); 
+        const senha = document.getElementById('password').value;
 
         errorDiv.style.display = 'none';
 
-        if(usuario === '' || senha === '') {
-
+        if(usuarioLimpo === '' || senha === '') {
             errorDiv.innerText = 'Preencha todos os campos.';
             errorDiv.style.display = 'block';
-
             return;
         }
 
+        // UX/Segurança: Desativa o botão para evitar cliques múltiplos
+        btnSubmit.disabled = true;
+        btnSubmit.innerText = 'Autenticando...';
+        btnSubmit.style.opacity = '0.7';
+
         try {
-
             const response = await fetch('login.php', {
-
                 method: 'POST',
-
                 headers: {
                     'Content-Type': 'application/json'
                 },
-
                 body: JSON.stringify({
-                    username: usuario,
+                    // Envia o CPF limpo. Se seu PHP preferir com pontos, mude para: username: usuarioFormatado
+                    username: usuarioLimpo, 
                     password: senha
                 })
-
             });
+
+            // Proteção caso o servidor retorne um erro estrutural (Ex: 500 Erro Interno) e não um JSON válido
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new TypeError("O servidor não respondeu com JSON!");
+            }
 
             const dados = await response.json();
 
             if(response.ok) {
-
-                // Dados do usuário
+                // Dados do usuário salvos com segurança no Client-side
                 localStorage.setItem('usuario_id', dados.usuario.id);
                 localStorage.setItem('usuario_nome', dados.usuario.nome);
                 localStorage.setItem('usuario_perfil', dados.usuario.perfil);
 
                 // Redirecionamento por perfil
-
                 switch(dados.usuario.perfil) {
-
                     case 'admin':
-                        window.location.href = 'dashboard_admin.php';
+                        window.location.href = 'admin.STG.php';
                         break;
-
                     case 'orientador':
-                        window.location.href = 'dashboard_orientador.php';
+                        window.location.href = 'professor.orin.STG.php';
                         break;
-
                     case 'supervisor':
-                        window.location.href = 'dashboard_supervisor.php';
+                        window.location.href = 'supervisor.php';
                         break;
-
                     case 'estagiario':
-                        window.location.href = 'dashboard_estagiario.php';
+                        window.location.href = 'alunos.STG.php';
                         break;
-
                     default:
-                        window.location.href = 'tela_inicial.html';
+                        window.location.href = 'login.html';
                 }
-
             } else {
-
-                errorDiv.innerText =
-                    dados.mensagem || 'Usuário ou senha inválidos.';
-
+                errorDiv.innerText = dados.mensagem || 'Usuário ou senha inválidos.';
                 errorDiv.style.display = 'block';
+                
+                // Reativa o botão em caso de falha nas credenciais
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = 'Entrar';
+                btnSubmit.style.opacity = '1';
             }
 
         } catch(error) {
-
-            errorDiv.innerText =
-                'Erro de conexão com o servidor. Verifique o Apache e o MySQL.';
-
+            errorDiv.innerText = 'Erro de conexão com o servidor. Verifique o Apache e o MySQL.';
             errorDiv.style.display = 'block';
+            
+            // Reativa o botão em caso de falha de conexão
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = 'Entrar';
+            btnSubmit.style.opacity = '1';
         }
-
     });
-
 </script>
 </body>
 </html>
