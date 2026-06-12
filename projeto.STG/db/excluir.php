@@ -1,17 +1,26 @@
 <?php
-session_start();
-if (!isset($_SESSION['usuario_perfil']) || $_SESSION['usuario_perfil'] !== 'admin') {
-    die("Acesso negado.");
-}
-require_once '../config/conexao.php';
-$pdo = Database::getConexao();
 
-if (isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    
-    $stmt = $pdo->prepare("DELETE FROM estagios WHERE id_estagio = :id");
-    $stmt->execute([':id' => $id]);
+header("Content-Type: application/json");
+include("conexao.php");
+
+$dados = json_decode(file_get_contents("php://input"), true);
+
+$id = $dados['id_usuario'] ?? null;
+
+if (!$id) {
+    http_response_code(400);
+    echo json_encode(["mensagem" => "ID não informado."]);
+    exit;
 }
 
-header("Location: ../listar/listar.php?msg=excluido");
-exit;
+$sql = "DELETE FROM usuarios WHERE id_usuario = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $id);
+
+if ($stmt->execute()) {
+    echo json_encode(["mensagem" => "Usuário excluído com sucesso."]);
+} else {
+    http_response_code(500);
+    echo json_encode(["mensagem" => "Erro ao excluir usuário."]);
+}
+?>
